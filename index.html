@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather Dashboard</title>
+<style>
+  /* ---------- Design tokens ---------- */
+  :root {
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --primary: #4f46e5;
+    --danger-bg: #fee2e2;
+    --danger: #991b1b;
+    --info-bg: #e0e7ff;
+    --info: #3730a3;
+    --radius: 18px;
+    --shadow: 0 8px 30px rgba(31, 41, 55, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #dbeafe 0%, #ede9fe 50%, #fce7f3 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 24px 16px 40px;
+  }
+
+
+  .app { max-width: 900px; margin: 0 auto; display: grid; gap: 18px; }
+  .hidden { display: none !important; }
+
+  header h1 { font-size: 1.8rem; }
+  header p { color: var(--muted); }
+
+  .card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+  }
+  .card h2 { font-size: 1.05rem; margin-bottom: 14px; }
+
+  /* ---------- Search ---------- */
+  .search { display: flex; gap: 10px; }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    padding: 13px 16px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+  .search input:focus { outline: none; border-color: var(--primary); }
+
+  .btn {
+    font: inherit;
+    font-weight: 600;
+
+    border: none;
+    border-radius: 12px;
+    padding: 13px 22px;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: #4338ca; }
+  .btn:disabled { opacity: 0.6; cursor: wait; }
+
+  /* ---------- Messages ---------- */
+  .message { padding: 14px 16px; border-radius: 12px; font-weight: 600; }
+  .message.error { background: var(--danger-bg); color: var(--danger); }
+  .message.info  { background: var(--info-bg); color: var(--info); }
+
+  /* ---------- City matches ---------- */
+  .matches { list-style: none; padding: 8px; }
+  .match-btn {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: block;
+  }
+  .match-btn:hover, .match-btn:focus-visible { background: #eef2ff; outline: none; }
+  .match-name { font-weight: 700; }
+  .match-sub { font-size: 0.85rem; color: var(--muted); }
+
+
+  /* ---------- Current weather ---------- */
+  #dashboard { display: grid; gap: 18px; }
+
+  .current {
+    background: linear-gradient(135deg, #6366f1, #3b82f6);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .city { font-size: 1.5rem; font-weight: 700; }
+  .date { opacity: 0.85; margin-bottom: 8px; }
+  .temp-row { display: flex; align-items: center; gap: 14px; }
+  .big-emoji { font-size: 3.6rem; line-height: 1; }
+  .big-temp { font-size: 3.4rem; font-weight: 800; line-height: 1; }
+  .condition { font-size: 1.1rem; margin-top: 6px; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 12px 16px;
+    text-align: center;
+    min-width: 100px;
+  }
+  .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+  .stat-value { font-size: 1.2rem; font-weight: 700; }
+
+  /* ---------- 7-day forecast ---------- */
+
+  .forecast-scroll { overflow-x: auto; }
+  .forecast { display: grid; grid-template-columns: repeat(7, minmax(84px, 1fr)); gap: 10px; }
+  .day {
+    background: #f5f7ff;
+    border-radius: 12px;
+    padding: 14px 8px;
+    text-align: center;
+  }
+  .day-name { font-weight: 600; }
+  .day-emoji { font-size: 1.9rem; margin: 4px 0; }
+  .day-max { font-weight: 700; }
+  .day-min { color: var(--muted); font-size: 0.9rem; }
+
+  /* ---------- Chart ---------- */
+  canvas { width: 100%; height: 260px; display: block; }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.85rem; }
+  footer a { color: inherit; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 600px) {
+    .search { flex-direction: column; }
+    .current { flex-direction: column; align-items: flex-start; }
+    .stats { width: 100%; }
+    .big-temp { font-size: 2.8rem; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+
+  <header>
+
+    <h1>🌤️ Weather Dashboard</h1>
+    <p>Search any city to see the current weather and forecast.</p>
+  </header>
+
+  <!-- Search form -->
+  <form id="searchForm" class="search" autocomplete="off">
+    <input type="search" id="cityInput" placeholder="Search for a city, e.g. Cairo" aria-label="City name">
+    <button type="submit" class="btn" id="searchBtn">Search</button>
+  </form>
+
+  <div id="message" class="message hidden" aria-live="polite"></div>
+  <ul id="matches" class="card matches hidden"></ul>
+
+  <!-- Dashboard (hidden until we have data) -->
+  <div id="dashboard" class="hidden">
+    <section class="card current">
+      <div>
+        <div class="city" id="cityName"></div>
+        <div class="date" id="dateText"></div>
+        <div class="temp-row">
+          <span class="big-emoji" id="currentEmoji"></span>
+          <span class="big-temp" id="currentTemp"></span>
+        </div>
+        <div class="condition" id="currentCondition"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Feels like</div><div class="stat-value" id="feelsLike"></div></div>
+        <div class="stat"><div class="stat-label">Humidity</div><div class="stat-value" id="humidity"></div></div>
+        <div class="stat"><div class="stat-label">Wind</div><div class="stat-value" id="wind"></div></div>
+      </div>
+    </section>
+
+
+    <section class="card">
+      <h2>7-day forecast</h2>
+      <div class="forecast-scroll"><div class="forecast" id="forecast"></div></div>
+    </section>
+
+    <section class="card">
+      <h2>Today's temperature by hour</h2>
+      <canvas id="chart"></canvas>
+    </section>
+  </div>
+
+  <footer>Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></footer>
+</main>
+
+<script>
+/* ==========================================================
+   1. CONFIG
+   ========================================================== */
+const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
+const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+const STORAGE_KEY = "weather-last-city";
+const NETWORK_ERROR = "😕 We couldn't reach the weather service. Check your internet connection and try again.";
+
+// Weather code -> [description, emoji] (WMO codes used by Open-Meteo)
+const WEATHER_CODES = {
+  0: ["Clear sky", "☀️"],           1: ["Mainly clear", "🌤️"],
+  2: ["Partly cloudy", "⛅"],        3: ["Overcast", "☁️"],
+  45: ["Fog", "🌫️"],               48: ["Rime fog", "🌫️"],
+  51: ["Light drizzle", "🌦️"],     53: ["Drizzle", "🌦️"],        55: ["Heavy drizzle", "🌧️"],
+  56: ["Freezing drizzle", "🌧️"],  57: ["Freezing drizzle", "🌧️"],
+  61: ["Light rain", "🌦️"],        63: ["Rain", "🌧️"],           65: ["Heavy rain", "🌧️"],
+  66: ["Freezing rain", "🌧️"],     67: ["Freezing rain", "🌧️"],
+
+  71: ["Light snow", "🌨️"],        73: ["Snow", "🌨️"],           75: ["Heavy snow", "❄️"],
+  77: ["Snow grains", "❄️"],
+  80: ["Light showers", "🌦️"],     81: ["Rain showers", "🌧️"],   82: ["Violent showers", "⛈️"],
+  85: ["Snow showers", "🌨️"],      86: ["Heavy snow showers", "❄️"],
+  95: ["Thunderstorm", "⛈️"],      96: ["Thunderstorm with hail", "⛈️"], 99: ["Thunderstorm with hail", "⛈️"]
+};
+
+/* ==========================================================
+   2. SMALL HELPERS
+   ========================================================== */
+const $ = (id) => document.getElementById(id);
+
+// Create an element with a class and text (textContent is safe from HTML injection)
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+// Turn a weather code into { text, emoji }. Uses a moon at night for clear skies.
+function describe(code, isDay = 1) {
+  const [text, emoji] = WEATHER_CODES[code] || ["Unknown", "🌡️"];
+  const night = !isDay && (code === 0 || code === 1);
+  return { text, emoji: night ? "🌙" : emoji };
+}
+
+const degrees = (t) => `${Math.round(t)}°`;
+
+function showMessage(text, type = "info") {
+  const box = $("message");
+  box.textContent = text;
+
+  box.className = `message ${type}`;
+}
+function hideMessage() { $("message").className = "message hidden"; }
+
+// fetch + JSON parsing. A network failure throws; so does a bad HTTP status.
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+/* ==========================================================
+   3. LOCAL STORAGE (remember the last city)
+   ========================================================== */
+function saveCity(city) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(city)); } catch (err) { /* storage unavailable */ }
+}
+
+function loadSavedCity() {
+  try {
+    const city = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const valid = city && typeof city.latitude === "number" && typeof city.longitude === "number";
+    return valid ? city : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+/* ==========================================================
+   4. SEARCH: geocoding API -> list of up to 5 matches
+   ========================================================== */
+async function searchCities(query) {
+
+  $("matches").classList.add("hidden");
+
+  if (query.length < 2) {
+    showMessage("Please type at least 2 letters.", "error");
+    return;
+  }
+
+  $("searchBtn").disabled = true;
+  showMessage("🔎 Searching…");
+  try {
+    const url = `${GEO_URL}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
+    const data = await fetchJson(url);
+    const results = data.results || []; // the API omits "results" when nothing matches
+
+    if (results.length === 0) {
+      showMessage(`🤔 We couldn't find a city called "${query}". Check the spelling and try again.`, "error");
+      return;
+    }
+    hideMessage();
+    renderMatches(results);
+  } catch (err) {
+    showMessage(NETWORK_ERROR, "error");
+  } finally {
+    $("searchBtn").disabled = false;
+  }
+}
+
+function renderMatches(results) {
+  const list = $("matches");
+  list.innerHTML = "";
+
+  results.forEach((r) => {
+
+    const li = document.createElement("li");
+    const btn = el("button", "match-btn");
+    btn.type = "button";
+    btn.appendChild(el("div", "match-name", r.name));
+    btn.appendChild(el("div", "match-sub", [r.admin1, r.country].filter(Boolean).join(", ")));
+
+    // Keep only the fields we need
+    btn.addEventListener("click", () => selectCity({
+      name: r.name,
+      admin1: r.admin1 || "",
+      country: r.country || "",
+      latitude: r.latitude,
+      longitude: r.longitude
+    }));
+
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
+
+  list.classList.remove("hidden");
+}
+
+function selectCity(city) {
+  $("matches").classList.add("hidden");
+  $("cityInput").value = city.name;
+  saveCity(city);
+  loadWeather(city);
+}
+
+/* ==========================================================
+   5. LOAD WEATHER FOR A CITY
+   ========================================================== */
+
+let requestCounter = 0; // lets us ignore old responses if the user clicks quickly
+let chartData = null;   // hourly temperatures for today (used by the canvas)
+
+async function loadWeather(city) {
+  const myRequest = ++requestCounter;
+  showMessage("⏳ Loading weather…");
+
+  const url = `${FORECAST_URL}?latitude=${city.latitude}&longitude=${city.longitude}` +
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m" +
+    "&hourly=temperature_2m" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min" +
+    "&forecast_days=7&timezone=auto";
+
+  try {
+    const data = await fetchJson(url);
+    if (myRequest !== requestCounter) return; // a newer request replaced this one
+
+    hideMessage();
+    $("dashboard").classList.remove("hidden"); // show first: the canvas needs a real size
+    renderCurrent(city, data.current);
+    renderForecast(data.daily);
+    prepareChart(data);
+  } catch (err) {
+    if (myRequest !== requestCounter) return;
+    showMessage(NETWORK_ERROR, "error");
+  }
+}
+
+/* ==========================================================
+   6. RENDER: current weather card
+   ========================================================== */
+function renderCurrent(city, current) {
+
+  const { text, emoji } = describe(current.weather_code, current.is_day);
+  const place = [city.name, city.admin1, city.country].filter(Boolean).join(", ");
+
+  $("cityName").textContent = place;
+  $("dateText").textContent = new Date(current.time).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric"
+  });
+  $("currentEmoji").textContent = emoji;
+  $("currentTemp").textContent = degrees(current.temperature_2m) + "C";
+  $("currentCondition").textContent = text;
+  $("feelsLike").textContent = degrees(current.apparent_temperature);
+  $("humidity").textContent = `${current.relative_humidity_2m}%`;
+  $("wind").textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+}
+
+/* ==========================================================
+   7. RENDER: 7-day forecast
+   ========================================================== */
+function renderForecast(daily) {
+  const box = $("forecast");
+  box.innerHTML = "";
+
+  daily.time.forEach((dateStr, i) => {
+    // "2026-11-24" -> local Date (avoids timezone shifts from new Date(string))
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const name = i === 0
+      ? "Today"
+      : new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "short" });
+    const { text, emoji } = describe(daily.weather_code[i]);
+
+    const day = el("div", "day");
+    day.title = text;
+
+    day.appendChild(el("div", "day-name", name));
+    day.appendChild(el("div", "day-emoji", emoji));
+    day.appendChild(el("div", "day-max", degrees(daily.temperature_2m_max[i])));
+    day.appendChild(el("div", "day-min", degrees(daily.temperature_2m_min[i])));
+    box.appendChild(day);
+  });
+}
+
+/* ==========================================================
+   8. HOURLY CHART (drawn manually on <canvas>)
+   ========================================================== */
+function prepareChart(data) {
+  // Keep only the hours that belong to today (in the city's own timezone)
+  const today = data.current.time.slice(0, 10);
+  const temps = data.hourly.time
+    .map((t, i) => (t.startsWith(today) ? data.hourly.temperature_2m[i] : null))
+    .filter((t) => t !== null);
+
+  chartData = { temps, nowHour: Number(data.current.time.slice(11, 13)) };
+  drawChart();
+}
+
+function drawChart() {
+  if (!chartData || chartData.temps.length < 2) return;
+  const canvas = $("chart");
+  const ctx = canvas.getContext("2d");
+  const { temps, nowHour } = chartData;
+
+  // Make the canvas sharp on high-DPI screens
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  // Chart area and scales
+  const pad = { top: 30, right: 18, bottom: 30, left: 44 };
+  const w = width - pad.left - pad.right;
+  const h = height - pad.top - pad.bottom;
+  const min = Math.floor(Math.min(...temps) - 1);
+  const max = Math.ceil(Math.max(...temps) + 1);
+  const x = (i) => pad.left + (i / (temps.length - 1)) * w;
+  const y = (t) => pad.top + (1 - (t - min) / (max - min)) * h;
+
+  ctx.font = "12px system-ui, sans-serif";
+
+  // Horizontal grid lines with temperature labels
+  ctx.textAlign = "right";
+  for (let k = 0; k <= 4; k++) {
+    const value = min + ((max - min) * k) / 4;
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y(value));
+    ctx.lineTo(width - pad.right, y(value));
+    ctx.stroke();
+    ctx.fillStyle = "#6b7280";
+    ctx.fillText(degrees(value), pad.left - 8, y(value) + 4);
+  }
+
+  // Gradient area under the line
+  const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + h);
+  gradient.addColorStop(0, "rgba(99, 102, 241, 0.35)");
+
+  gradient.addColorStop(1, "rgba(99, 102, 241, 0.02)");
+  ctx.beginPath();
+  temps.forEach((t, i) => (i === 0 ? ctx.moveTo(x(i), y(t)) : ctx.lineTo(x(i), y(t))));
+  ctx.lineTo(x(temps.length - 1), pad.top + h);
+  ctx.lineTo(x(0), pad.top + h);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  // The temperature line
+  ctx.beginPath();
+  temps.forEach((t, i) => (i === 0 ? ctx.moveTo(x(i), y(t)) : ctx.lineTo(x(i), y(t))));
+  ctx.strokeStyle = "#4f46e5";
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
+  ctx.stroke();
+
+  // Hour labels (fewer on narrow screens)
+  const step = width < 480 ? 6 : 3;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#6b7280";
+  for (let i = 0; i < temps.length; i += step) {
+    ctx.fillText(`${String(i).padStart(2, "0")}:00`, x(i), height - 8);
+  }
+
+  // Highlight the current hour
+  if (nowHour < temps.length) {
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "#a5b4fc";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x(nowHour), pad.top);
+
+    ctx.lineTo(x(nowHour), pad.top + h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(x(nowHour), y(temps[nowHour]), 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#4f46e5";
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "#1f2937";
+    ctx.font = "bold 13px system-ui, sans-serif";
+    ctx.fillText(`Now ${degrees(temps[nowHour])}`, x(nowHour), y(temps[nowHour]) - 14);
+  }
+}
+
+// Redraw the chart when the window size changes (responsive canvas)
+window.addEventListener("resize", drawChart);
+
+/* ==========================================================
+   9. EVENTS & STARTUP
+   ========================================================== */
+$("searchForm").addEventListener("submit", (event) => {
+  event.preventDefault(); // stop the page from reloading
+  searchCities($("cityInput").value.trim());
+});
+
+// On startup, load the last searched city (if there is one)
+const savedCity = loadSavedCity();
+if (savedCity) {
+
+  $("cityInput").value = savedCity.name;
+  loadWeather(savedCity);
+} else {
+  showMessage("👋 Search for a city to see its weather.");
+}
+</script>
+</body>
+</html>
