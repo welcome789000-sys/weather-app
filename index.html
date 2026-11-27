@@ -156,6 +156,28 @@
     .stats { width: 100%; }
     .big-temp { font-size: 2.8rem; }
   }
+
+/* ---------- Taqs: night sky look ---------- */
+:root{--text:#e8f1f5;--muted:#9fb6c2;--border:#25485a;--primary:#f59e0b;--danger-bg:#4a1d22;--danger:#fecaca;--info-bg:#173b50;--info:#bae6fd;--radius:22px;--shadow:0 10px 30px rgba(0,0,0,.35)}
+body{background:radial-gradient(1200px 600px at 80% -10%,#1d4b63 0,transparent 60%),#0a1c27;background-attachment:fixed}
+.app{max-width:760px}
+header{text-align:center;padding:10px 0}
+header h1{font-size:2.6rem;letter-spacing:.12em;text-transform:uppercase;color:#fbbf24}
+.card{background:rgba(18,48,63,.9);border:1px solid var(--border)}
+.search input{background:#102a38;color:var(--text);border-color:var(--border)}
+.search input::placeholder{color:#7b95a3}
+.btn{color:#1b1200}.btn:hover{background:#d98706}
+.match-btn{color:var(--text)}.match-btn:hover,.match-btn:focus-visible{background:#173b50}
+.current{background:linear-gradient(160deg,#f59e0b 0%,#e8590c 55%,#7c2d12 100%);color:#fff;flex-direction:column;align-items:flex-start;text-align:left}
+.current .stats{width:100%}
+.big-temp{font-size:4.4rem}
+.forecast{grid-template-columns:1fr;gap:8px}
+.day{background:#102a38;display:grid;grid-template-columns:90px 50px 1fr auto;align-items:center;gap:12px;text-align:left;padding:10px 16px}
+.day-emoji{margin:0;font-size:1.6rem}
+.day-name{font-weight:700}
+.day-max,.day-min{display:inline}
+.day-min{margin-left:10px}
+.forecast-scroll{overflow:visible}
 </style>
 </head>
 <body>
@@ -480,20 +502,20 @@ function drawChart() {
   ctx.textAlign = "right";
   for (let k = 0; k <= 4; k++) {
     const value = min + ((max - min) * k) / 4;
-    ctx.strokeStyle = "#e5e7eb";
+    ctx.strokeStyle = "#25485a";
     ctx.beginPath();
     ctx.moveTo(pad.left, y(value));
     ctx.lineTo(width - pad.right, y(value));
     ctx.stroke();
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = "#9fb6c2";
     ctx.fillText(degrees(value), pad.left - 8, y(value) + 4);
   }
 
   // Gradient area under the line
   const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + h);
-  gradient.addColorStop(0, "rgba(99, 102, 241, 0.35)");
+  gradient.addColorStop(0, "rgba(245, 158, 11, 0.35)");
 
-  gradient.addColorStop(1, "rgba(99, 102, 241, 0.02)");
+  gradient.addColorStop(1, "rgba(245, 158, 11, 0.02)");
   ctx.beginPath();
   temps.forEach((t, i) => (i === 0 ? ctx.moveTo(x(i), y(t)) : ctx.lineTo(x(i), y(t))));
   ctx.lineTo(x(temps.length - 1), pad.top + h);
@@ -505,7 +527,7 @@ function drawChart() {
   // The temperature line
   ctx.beginPath();
   temps.forEach((t, i) => (i === 0 ? ctx.moveTo(x(i), y(t)) : ctx.lineTo(x(i), y(t))));
-  ctx.strokeStyle = "#4f46e5";
+  ctx.strokeStyle = "#f59e0b";
   ctx.lineWidth = 3;
   ctx.lineJoin = "round";
   ctx.stroke();
@@ -513,7 +535,7 @@ function drawChart() {
   // Hour labels (fewer on narrow screens)
   const step = width < 480 ? 6 : 3;
   ctx.textAlign = "center";
-  ctx.fillStyle = "#6b7280";
+  ctx.fillStyle = "#9fb6c2";
   for (let i = 0; i < temps.length; i += step) {
     ctx.fillText(`${String(i).padStart(2, "0")}:00`, x(i), height - 8);
   }
@@ -521,7 +543,7 @@ function drawChart() {
   // Highlight the current hour
   if (nowHour < temps.length) {
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = "#a5b4fc";
+    ctx.strokeStyle = "#fcd34d";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x(nowHour), pad.top);
@@ -532,7 +554,7 @@ function drawChart() {
 
     ctx.beginPath();
     ctx.arc(x(nowHour), y(temps[nowHour]), 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#4f46e5";
+    ctx.fillStyle = "#f59e0b";
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
