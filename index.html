@@ -172,11 +172,15 @@ header h1{font-size:2.6rem;letter-spacing:.12em;text-transform:uppercase;color:#
 .current .stats{width:100%}
 .big-temp{font-size:4.4rem}
 .forecast{grid-template-columns:1fr;gap:8px}
-.day{background:#102a38;display:grid;grid-template-columns:90px 50px 1fr auto;align-items:center;gap:12px;text-align:left;padding:10px 16px}
+.day{background:#102a38;display:grid;grid-template-columns:90px 50px 1fr;align-items:center;gap:12px;text-align:left;padding:10px 16px}
 .day-emoji{margin:0;font-size:1.6rem}
 .day-name{font-weight:700}
 .day-max,.day-min{display:inline}
-.day-min{margin-left:10px}
+.day-min{margin-left:0;color:#8fb3c7}
+.range{display:flex;align-items:center;gap:10px;direction:ltr;max-width:340px}
+.range .day-min,.range .day-max{min-width:2.6em;text-align:center}
+.track{position:relative;flex:1;height:6px;border-radius:3px;background:#1d4157}
+.fill{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#60a5fa,#fb923c)}
 .forecast-scroll{overflow:visible}
 </style>
 </head>
@@ -451,8 +455,19 @@ function renderForecast(daily) {
 
     day.appendChild(el("div", "day-name", name));
     day.appendChild(el("div", "day-emoji", emoji));
-    day.appendChild(el("div", "day-max", degrees(daily.temperature_2m_max[i])));
-    day.appendChild(el("div", "day-min", degrees(daily.temperature_2m_min[i])));
+    const lo = daily.temperature_2m_min[i], hi = daily.temperature_2m_max[i];
+    const wMin = Math.min(...daily.temperature_2m_min), wMax = Math.max(...daily.temperature_2m_max);
+    const span = Math.max(wMax - wMin, 1);
+    const range = el("div", "range");
+    range.appendChild(el("span", "day-min", degrees(lo)));
+    const track = el("span", "track");
+    const fill = el("i", "fill");
+    fill.style.left = ((lo - wMin) / span * 100) + "%";
+    fill.style.width = Math.max((hi - lo) / span * 100, 6) + "%";
+    track.appendChild(fill);
+    range.appendChild(track);
+    range.appendChild(el("span", "day-max", degrees(hi)));
+    day.appendChild(range);
     box.appendChild(day);
   });
 }
