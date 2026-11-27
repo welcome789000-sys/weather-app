@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Weather Dashboard</title>
+<title>Taqs | Live Weather by City</title>
 <style>
   /* ---------- Design tokens ---------- */
   :root {
@@ -163,8 +163,8 @@
 
   <header>
 
-    <h1>🌤️ Weather Dashboard</h1>
-    <p>Search any city to see the current weather and forecast.</p>
+    <h1>Taqs</h1>
+    <p>Type a city and get the weather right now, the week ahead, and the hours of today.</p>
   </header>
 
   <!-- Search form -->
@@ -197,12 +197,12 @@
 
 
     <section class="card">
-      <h2>7-day forecast</h2>
+      <h2>Next 7 days</h2>
       <div class="forecast-scroll"><div class="forecast" id="forecast"></div></div>
     </section>
 
     <section class="card">
-      <h2>Today's temperature by hour</h2>
+      <h2>Hour by hour today</h2>
       <canvas id="chart"></canvas>
     </section>
   </div>
@@ -217,7 +217,7 @@
 const GEO_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 const STORAGE_KEY = "weather-last-city";
-const NETWORK_ERROR = "😕 We couldn't reach the weather service. Check your internet connection and try again.";
+const NETWORK_ERROR = "We couldn't reach the weather service. Check your internet connection and try again.";
 
 // Weather code -> [description, emoji] (WMO codes used by Open-Meteo)
 const WEATHER_CODES = {
@@ -303,14 +303,14 @@ async function searchCities(query) {
   }
 
   $("searchBtn").disabled = true;
-  showMessage("🔎 Searching…");
+  showMessage("Searching…");
   try {
     const url = `${GEO_URL}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`;
     const data = await fetchJson(url);
     const results = data.results || []; // the API omits "results" when nothing matches
 
     if (results.length === 0) {
-      showMessage(`🤔 We couldn't find a city called "${query}". Check the spelling and try again.`, "error");
+      showMessage(`We couldn't find a city called "${query}". Check the spelling and try again.`, "error");
       return;
     }
     hideMessage();
@@ -366,7 +366,7 @@ let chartData = null;   // hourly temperatures for today (used by the canvas)
 
 async function loadWeather(city) {
   const myRequest = ++requestCounter;
-  showMessage("⏳ Loading weather…");
+  showMessage("Loading weather…");
 
   const url = `${FORECAST_URL}?latitude=${city.latitude}&longitude=${city.longitude}` +
     "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m" +
@@ -562,7 +562,7 @@ if (savedCity) {
   $("cityInput").value = savedCity.name;
   loadWeather(savedCity);
 } else {
-  showMessage("👋 Search for a city to see its weather.");
+  showMessage("Search for a city to see its weather.");
 }
 </script>
 </body>
